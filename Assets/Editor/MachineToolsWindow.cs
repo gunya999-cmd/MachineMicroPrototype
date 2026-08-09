@@ -69,42 +69,43 @@ public class MachineToolsWindow : EditorWindow
 
     private static void UpdateProjectFromGitHub()
     {
-        if (!Directory.Exists(Path.Combine(ProjectRoot, ".git")))
+        string updaterPath = Path.Combine(ProjectRoot, "UPDATE_FROM_GITHUB.bat");
+
+        if (File.Exists(updaterPath))
         {
-            EditorUtility.DisplayDialog(
-                "Machine Tools",
-                "Локальная папка Unity не связана с Git. Нужна однократная настройка Git для этой папки.",
-                "OK");
+            ProcessResult update = RunProcess(
+                "cmd.exe",
+                "/c \"\"" + updaterPath + "\" --no-pause\"");
+
+            if (!update.Success)
+            {
+                ShowProcessError("Не удалось обновить проект из GitHub.", update);
+                return;
+            }
+
+            Debug.Log("[Machine Tools] Project update complete.\n" + update.Output);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
             return;
         }
 
-        GitResult branch = RunGit("branch --show-current");
-        if (!branch.Success)
+        if (Directory.Exists(Path.Combine(ProjectRoot, ".git")))
         {
-            ShowGitError("Не удалось определить текущую ветку.", branch);
+            ProcessResult pull = RunProcess("git", "pull --ff-only origin main");
+            if (!pull.Success)
+            {
+                ShowProcessError("Git не смог безопасно обновить проект.", pull);
+                return;
+            }
+
+            Debug.Log("[Machine Tools] Git update complete.\n" + pull.Output);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
             return;
         }
 
-        if (!string.Equals(branch.Output.Trim(), "main", StringComparison.OrdinalIgnoreCase))
-        {
-            EditorUtility.DisplayDialog(
-                "Machine Tools",
-                "UPDATE PROJECT работает из ветки main. Текущая ветка: " + branch.Output.Trim(),
-                "OK");
-            return;
-        }
-
-        GitResult pull = RunGit("pull --ff-only origin main");
-        if (!pull.Success)
-        {
-            ShowGitError(
-                "Git не смог безопасно обновить проект. Локальные изменения не перезаписаны.",
-                pull);
-            return;
-        }
-
-        Debug.Log("[Machine Tools] Git update complete.\n" + pull.Output);
-        AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+        EditorUtility.DisplayDialog(
+            "Machine Tools",
+            "В корне проекта нет UPDATE_FROM_GITHUB.bat и папка не является Git-репозиторием.",
+            "OK");
     }
 
     private static MethodInfo FindBuilderMethod()
@@ -134,13 +135,13 @@ public class MachineToolsWindow : EditorWindow
         }
     }
 
-    private static GitResult RunGit(string arguments)
+    private static ProcessResult RunProcess(string fileName, string arguments)
     {
         try
         {
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
-                FileName = "git",
+                FileName = fileName,
                 Arguments = arguments,
                 WorkingDirectory = ProjectRoot,
                 UseShellExecute = false,
@@ -160,27 +161,27 @@ public class MachineToolsWindow : EditorWindow
                     ? stdout
                     : stdout + Environment.NewLine + stderr;
 
-                return new GitResult(process.ExitCode == 0, output.Trim());
+                return new ProcessResult(process.ExitCode == 0, output.Trim());
             }
         }
         catch (Exception exception)
         {
-            return new GitResult(false, exception.Message);
+            return new ProcessResult(false, exception.Message);
         }
     }
 
-    private static void ShowGitError(string message, GitResult result)
+    private static void ShowProcessError(string message, ProcessResult result)
     {
         Debug.LogError("[Machine Tools] " + message + "\n" + result.Output);
         EditorUtility.DisplayDialog("Machine Tools", message + "\n\n" + result.Output, "OK");
     }
 
-    private struct GitResult
+    private struct ProcessResult
     {
         public bool Success;
         public string Output;
 
-        public GitResult(bool success, string output)
+        public ProcessResult(bool success, string output)
         {
             Success = success;
             Output = output ?? string.Empty;
