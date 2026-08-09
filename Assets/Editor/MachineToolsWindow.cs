@@ -24,7 +24,8 @@ public class MachineToolsWindow : EditorWindow
         GUILayout.Space(8f);
 
         EditorGUILayout.HelpBox(
-            "UPDATE PROJECT получает свежий main из GitHub. После обновления Unity автоматически перекомпилирует проект.",
+            "UPDATE PROJECT выполняет безопасный git pull --ff-only из origin/main.\n" +
+            "Никакие .bat, PowerShell или ZIP-загрузчики не используются.",
             MessageType.Info);
 
         GUILayout.Space(12f);
@@ -56,7 +57,7 @@ public class MachineToolsWindow : EditorWindow
         {
             GUILayout.Space(8f);
             EditorGUILayout.HelpBox(
-                "Сборщик сцены ещё не загружен локально. Сначала нажми UPDATE PROJECT.",
+                "Сборщик сцены ещё не загружен локально. Сначала обнови проект через Git.",
                 MessageType.Warning);
         }
 
@@ -69,43 +70,67 @@ public class MachineToolsWindow : EditorWindow
 
     private static void UpdateProjectFromGitHub()
     {
-        string updaterPath = Path.Combine(ProjectRoot, "UPDATE_FROM_GITHUB.bat");
-
-        if (File.Exists(updaterPath))
+        if (!Directory.Exists(Path.Combine(ProjectRoot, ".git")))
         {
-            ProcessResult update = RunProcess(
-                "cmd.exe",
-                "/c \"\"" + updaterPath + "\" --no-pause\"");
-
-            if (!update.Success)
-            {
-                ShowProcessError("Не удалось обновить проект из GitHub.", update);
-                return;
-            }
-
-            Debug.Log("[Machine Tools] Project update complete.\n" + update.Output);
-            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+            EditorUtility.DisplayDialog(
+                "Machine Tools",
+                "Локальная папка проекта не является Git-репозиторием.",
+                "OK");
             return;
         }
 
-        if (Directory.Exists(Path.Combine(ProjectRoot, ".git")))
+        ProcessResult remote = RunProcess("git", "remote get-url origin");
+        if (!remote.Success)
         {
-            ProcessResult pull = RunProcess("git", "pull --ff-only origin main");
-            if (!pull.Success)
-            {
-                ShowProcessError("Git не смог безопасно обновить проект.", pull);
-                return;
-            }
-
-            Debug.Log("[Machine Tools] Git update complete.\n" + pull.Output);
-            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+            ShowProcessError("Не удалось проверить Git remote origin.", remote);
             return;
         }
 
-        EditorUtility.DisplayDialog(
-            "Machine Tools",
-            "В корне проекта нет UPDATE_FROM_GITHUB.bat и папка не является Git-репозиторием.",
-            "OK");
+        const string expectedRepository = "github.com/gunya999-cmd/MachineMicroPrototype.git";
+        if (remote.Output.IndexOf(expectedRepository, StringComparison.OrdinalIgnoreCase) < 0)
+        {
+            EditorUtility.DisplayDialog(
+                "Machine Tools",
+                "origin указывает не на MachineMicroPrototype:\n\n" + remote.Output,
+                "OK");
+            return;
+        }
+
+        ProcessResult branch = RunProcess("git", "branch --show-current");
+        if (!branch.Success || !string.Equals(branch.Output.Trim(), "main", StringComparison.OrdinalIgnoreCase))
+        {
+            EditorUtility.DisplayDialog(
+                "Machine Tools",
+                "UPDATE PROJECT работает только в ветке main.\n\nТекущая ветка: " + branch.Output,
+                "OK");
+            return;
+        }
+
+        ProcessResult status = RunProcess("git", "status --porcelain");
+        if (!status.Success)
+        {
+            ShowProcessError("Не удалось проверить локальные изменения.", status);
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(status.Output))
+        {
+            EditorUtility.DisplayDialog(
+                "Machine Tools",
+                "Есть локальные изменения. UPDATE PROJECT остановлен, чтобы ничего не потерять.\n\n" + status.Output,
+                "OK");
+            return;
+        }
+
+        ProcessResult pull = RunProcess("git", "pull --ff-only origin main");
+        if (!pull.Success)
+        {
+            ShowProcessError("Git не смог безопасно обновить проект.", pull);
+            return;
+        }
+
+        Debug.Log("[Machine Tools] Git update complete.\n" + pull.Output);
+        AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
     }
 
     private static MethodInfo FindBuilderMethod()
@@ -119,7 +144,7 @@ public class MachineToolsWindow : EditorWindow
         MethodInfo method = FindBuilderMethod();
         if (method == null)
         {
-            EditorUtility.DisplayDialog("Machine Tools", "Сначала нажми UPDATE PROJECT.", "OK");
+            EditorUtility.DisplayDialog("Machine Tools", "Сборщик сцены ещё недоступен.", "OK");
             return;
         }
 
