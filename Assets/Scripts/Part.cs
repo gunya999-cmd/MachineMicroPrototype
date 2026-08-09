@@ -35,14 +35,14 @@ public class Part : MonoBehaviour
 
     public void EnterRun()
     {
-        rb.velocity = Vector2.zero;
+        rb.linearVelocity = Vector2.zero;
         rb.angularVelocity = 0f;
         rb.bodyType = runBodyType;
     }
 
     public void FreezeEdit()
     {
-        rb.velocity = Vector2.zero;
+        rb.linearVelocity = Vector2.zero;
         rb.angularVelocity = 0f;
 
         rb.bodyType = RigidbodyType2D.Kinematic;
