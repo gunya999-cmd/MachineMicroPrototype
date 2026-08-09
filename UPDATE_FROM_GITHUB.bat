@@ -29,6 +29,9 @@ if not exist "ProjectSettings" (
     exit /b 1
 )
 
+set "PROJECT_DIR=%~dp0"
+if "%PROJECT_DIR:~-1%"=="\" set "PROJECT_DIR=%PROJECT_DIR:~0,-1%"
+
 set "ZIP_FILE=%TEMP%\MachineMicroPrototype_main_%RANDOM%_%RANDOM%.zip"
 set "UPDATE_DIR=%TEMP%\MachineMicroPrototype_update_%RANDOM%_%RANDOM%"
 set "SOURCE_DIR=%UPDATE_DIR%\MachineMicroPrototype-main"
@@ -59,7 +62,7 @@ if not exist "%SOURCE_DIR%\Assets" (
 
 echo Updating Unity project files...
 
-robocopy "%SOURCE_DIR%" "%~dp0" /E /R:2 /W:1 /NFL /NDL /NJH /NJS /NP ^
+robocopy "%SOURCE_DIR%" "%PROJECT_DIR%" /E /R:2 /W:1 /NFL /NDL /NJH /NJS /NP ^
     /XD ".git" "Library" "Temp" "Obj" "Logs" "UserSettings" "MemoryCaptures" "Records" "Build" "Builds" ".vs" ^
     /XF "UPDATE_FROM_GITHUB.bat"
 
