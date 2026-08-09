@@ -2,6 +2,9 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
+set "NO_PAUSE=0"
+if /I "%~1"=="--no-pause" set "NO_PAUSE=1"
+
 echo ==============================================
 echo   MachineMicroPrototype - GitHub Update
 echo ==============================================
@@ -10,19 +13,19 @@ echo.
 if not exist "Assets" (
     echo ERROR: Put this file in the root of the Unity project.
     echo The same folder must contain Assets, Packages and ProjectSettings.
-    pause
+    if "%NO_PAUSE%"=="0" pause
     exit /b 1
 )
 
 if not exist "Packages" (
     echo ERROR: Packages folder was not found.
-    pause
+    if "%NO_PAUSE%"=="0" pause
     exit /b 1
 )
 
 if not exist "ProjectSettings" (
     echo ERROR: ProjectSettings folder was not found.
-    pause
+    if "%NO_PAUSE%"=="0" pause
     exit /b 1
 )
 
@@ -41,7 +44,7 @@ if errorlevel 1 (
     echo Check the internet connection and try again.
     if exist "%ZIP_FILE%" del /q "%ZIP_FILE%" >nul 2>&1
     if exist "%UPDATE_DIR%" rmdir /s /q "%UPDATE_DIR%" >nul 2>&1
-    pause
+    if "%NO_PAUSE%"=="0" pause
     exit /b 1
 )
 
@@ -50,7 +53,7 @@ if not exist "%SOURCE_DIR%\Assets" (
     echo ERROR: Downloaded archive has an unexpected structure.
     if exist "%ZIP_FILE%" del /q "%ZIP_FILE%" >nul 2>&1
     if exist "%UPDATE_DIR%" rmdir /s /q "%UPDATE_DIR%" >nul 2>&1
-    pause
+    if "%NO_PAUSE%"=="0" pause
     exit /b 1
 )
 
@@ -67,7 +70,7 @@ if %ROBOCOPY_CODE% GEQ 8 (
     echo ERROR: Some project files could not be copied. Robocopy code: %ROBOCOPY_CODE%
     if exist "%ZIP_FILE%" del /q "%ZIP_FILE%" >nul 2>&1
     if exist "%UPDATE_DIR%" rmdir /s /q "%UPDATE_DIR%" >nul 2>&1
-    pause
+    if "%NO_PAUSE%"=="0" pause
     exit /b 1
 )
 
@@ -78,4 +81,4 @@ echo.
 echo SUCCESS: Project files were updated from GitHub main.
 echo Return to Unity. Unity will import and compile the changed files.
 echo.
-pause
+if "%NO_PAUSE%"=="0" pause
