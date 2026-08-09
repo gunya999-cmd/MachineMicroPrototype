@@ -29,7 +29,7 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        parts = FindObjectsOfType<Part>();
+        parts = FindObjectsByType<Part>(FindObjectsSortMode.None);
     }
 
     private void Start()
@@ -39,7 +39,7 @@ public class GameManager : MonoBehaviour
             winPanel.SetActive(false);
         }
 
-        foreach (var part in parts)
+        foreach (Part part in parts)
         {
             part.SaveState();
         }
@@ -59,12 +59,12 @@ public class GameManager : MonoBehaviour
             winPanel.SetActive(false);
         }
 
-        foreach (var part in parts)
+        foreach (Part part in parts)
         {
             part.SaveState();
         }
 
-        foreach (var part in parts)
+        foreach (Part part in parts)
         {
             part.EnterRun();
         }
@@ -79,7 +79,7 @@ public class GameManager : MonoBehaviour
             winPanel.SetActive(false);
         }
 
-        foreach (var part in parts)
+        foreach (Part part in parts)
         {
             part.Restore();
         }
@@ -94,7 +94,7 @@ public class GameManager : MonoBehaviour
 
         CurrentMode = GameMode.Edit;
 
-        foreach (var part in parts)
+        foreach (Part part in parts)
         {
             part.FreezeEdit();
         }
